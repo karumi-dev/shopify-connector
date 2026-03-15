@@ -23,9 +23,12 @@ class ShopifyCredentialFactory extends Factory
     public function definition()
     {
         return [
-            'shopUrl'      => 'https://demotest.myshopify.com',
-            'apiVersion'   => '2025-01',
-            'accessToken'  => '$2y$10$92IXUNpkjO0rOQ5byMi',
+            'shopUrl'        => 'https://demotest.myshopify.com',
+            'apiVersion'     => '2025-01',
+            'clientId'       => 'fake-client-id',
+            'clientSecret'   => 'fake-client-secret',
+            'accessToken'    => 'fake-access-token',
+            'tokenExpiresAt' => now()->addDay(),
         ];
     }
 }

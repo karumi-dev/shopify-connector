@@ -6,8 +6,8 @@
     <x-slot:title>
         @lang('shopify::app.shopify.credential.index.title')
     </x-slot>
-    
-    <x-admin::form  
+
+    <x-admin::form
         :action="route('shopify.credentials.update', ['id' => $credential->id])"
     >
         @method('PUT')
@@ -25,8 +25,8 @@
                     @lang('shopify::app.shopify.credential.edit.back-btn')
                 </a>
 
-                <button 
-                    type="submit" 
+                <button
+                    type="submit"
                     class="primary-button"
                     aria-lebel="Submit"
                 >
@@ -61,39 +61,60 @@
                             :value="old('shopUrl') ?? $credential->shopUrl"
                             :label="trans('shopify::app.shopify.credential.index.url')"
                             :placeholder="trans('shopify::app.shopify.credential.index.shopifyurlplaceholder')"
-                            
+
                         />
 
                         <x-admin::form.control-group.error control-name="shopUrl" />
                     </x-admin::form.control-group>
-                    
+
+                    <!-- Client ID -->
                     <x-admin::form.control-group class="w-[525px]">
                         <x-admin::form.control-group.label class="required">
-                            @lang('shopify::app.shopify.credential.index.accesstoken')
+                            @lang('shopify::app.shopify.credential.index.clientId')
+                        </x-admin::form.control-group.label>
+
+                        <x-admin::form.control-group.control
+                            type="text"
+                            id="clientId"
+                            name="clientId"
+                            rules="required"
+                            :value="old('clientId') ?? $credential->clientId"
+                            :label="trans('shopify::app.shopify.credential.index.clientId')"
+                            :placeholder="trans('shopify::app.shopify.credential.index.clientIdPlaceholder')"
+                        />
+
+                        <x-admin::form.control-group.error control-name="clientId" />
+                    </x-admin::form.control-group>
+
+                    <!-- Client Secret -->
+                    <x-admin::form.control-group class="w-[525px]">
+                        <x-admin::form.control-group.label class="required">
+                            @lang('shopify::app.shopify.credential.index.clientSecret')
                         </x-admin::form.control-group.label>
 
                         <x-admin::form.control-group.control
                             type="password"
-                            id="accessToken"
-                            name="accessToken"
+                            id="clientSecret"
+                            name="clientSecret"
                             rules="required"
-                            :value="old('accessToken') ?? $credential->accessToken"
-                            :label="trans('shopify::app.shopify.credential.index.accesstoken')"
-                            :placeholder="trans('shopify::app.shopify.credential.index.accesstoken')"
+                            :value="old('clientSecret') ?? $credential->clientSecret"
+                            :label="trans('shopify::app.shopify.credential.index.clientSecret')"
+                            :placeholder="trans('shopify::app.shopify.credential.index.clientSecretPlaceholder')"
                         />
 
-                        <x-admin::form.control-group.error control-name="accessToken" />
+                        <x-admin::form.control-group.error control-name="clientSecret" />
                     </x-admin::form.control-group>
+
                     <x-admin::form.control-group class="mb-4 w-[525px]">
                         <x-admin::form.control-group.label class="required">
                             @lang('shopify::app.shopify.credential.index.apiVersion')
                         </x-admin::form.control-group.label>
 
                         @php
-                        
+
                             $apiVersion = json_encode($apiVersion, true);
                             $selectedOption = old('apiVersion') ?: $credential->apiVersion;
-                            
+
                         @endphp
 
                         <x-admin::form.control-group.control
@@ -170,7 +191,7 @@
                             <x-admin::form.control-group.label>
                                 @lang('admin::app.catalog.category_fields.edit.status')
                             </x-admin::form.control-group.label>
-                            <input 
+                            <input
                                 type="hidden"
                                 name="active"
                                 value="0"
@@ -190,38 +211,38 @@
                     </p>
                     <div class="grid grid-cols-2 gap-2.5 items-center px-4 py-4 border-b dark:border-cherry-800 text-gray-600 dark:text-gray-300 transition-all hover:bg-violet-50 hover:bg-opacity-30 dark:hover:bg-cherry-800">
                         <p class="break-words font-bold"> @lang('shopify::app.shopify.credential.shopify.locale')</p>
-                        
+
                         <p class="break-words font-bold">@lang('shopify::app.shopify.credential.unopim.locale')</p>
                     </div>
-                    
+
                         @php
-                             
+
                             $options = core()->getAllActiveLocales();
                             $storelocaleMapping = $credential->storelocaleMapping;
-                            
+
                             $JsonShopLocales = json_encode($shopLocales, true);
                             $allLocale = $credential->storeLocales ?? [];
-                            
+
                             $defaultLocale = array_values(array_filter($allLocale, function($locale) {
                                 return isset($locale['defaultlocale']) && $locale['defaultlocale'] === true;
                             }));
                             $defaultLocale = !empty($defaultLocale) ? $defaultLocale[0] : null;
-                            
+
                             $defaultLocaleCode = $defaultLocale ?  $defaultLocale['locale'] : null;
-                            
+
                         @endphp
 
                         <input type="hidden" name="storeLocales" class="default" value="{{ $JsonShopLocales }}">
 
                         @foreach ($shopLocales as $locale)
-                                @php 
+                                @php
                                     $localeCode = $locale['locale'];
                                     $primary = $locale['primary'] ? '(Default)' : '';
                                     $selectedLocale = $storelocaleMapping[$localeCode] ?? null;
                                 @endphp
                            <div class="grid grid-cols-2 gap-2.5 items-center px-4 py-4 border-b dark:border-cherry-800 text-gray-600 dark:text-gray-300 transition-all hover:bg-violet-50 hover:bg-opacity-30 dark:hover:bg-cherry-800">
                                 <p class="break-words">{{ $locale['name'].' '.$locale['locale'].' '.$primary }}</p>
-                                
+
                                 <x-admin::form.control-group>
                                     <x-admin::form.control-group.control
                                         type="select"
@@ -242,6 +263,6 @@
                 </div>
             </div>
         </div>
-    </x-admin::form> 
-    
+    </x-admin::form>
+
 </x-admin::layouts.with-history>

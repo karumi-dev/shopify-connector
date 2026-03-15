@@ -96,6 +96,7 @@ class Importer extends AbstractImporter
             throw new \InvalidArgumentException('Invalid Credential: The credential is either disabled, incorrect, or does not exist');
         }
         $this->credentialArray = [
+            'id'          => $this->credential?->id,
             'shopUrl'     => $this->credential?->shopUrl,
             'accessToken' => $this->credential?->accessToken,
             'apiVersion'  => $this->credential?->apiVersion,

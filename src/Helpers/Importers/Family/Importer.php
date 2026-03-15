@@ -121,6 +121,7 @@ class Importer extends AbstractImporter
         }
 
         $this->credentialArray = [
+            'id'          => $this->credential?->id,
             'shopUrl'     => $this->credential?->shopUrl,
             'accessToken' => $this->credential?->accessToken,
             'apiVersion'  => $this->credential?->apiVersion,

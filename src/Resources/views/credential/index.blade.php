@@ -72,7 +72,7 @@
 
                         <!-- Modal Content -->
                         <x-slot:content>
-                            <!-- Name -->
+                            <!-- Shop URL -->
                             <x-admin::form.control-group>
                                 <x-admin::form.control-group.label class="required">
                                     @lang('shopify::app.shopify.credential.index.url')
@@ -89,24 +89,42 @@
                                 <x-admin::form.control-group.error control-name="shopUrl" />
                             </x-admin::form.control-group>
 
-                            <!-- accesstoken -->
+                            <!-- Client ID -->
                             <x-admin::form.control-group>
                                 <x-admin::form.control-group.label class="required">
-                                    @lang('shopify::app.shopify.credential.index.accesstoken')
+                                    @lang('shopify::app.shopify.credential.index.clientId')
                                 </x-admin::form.control-group.label>
 
                                 <x-admin::form.control-group.control
                                     type="text"
-                                    id="accessToken"
-                                    name="accessToken"
+                                    id="clientId"
+                                    name="clientId"
                                     rules="required"
-                                    :label="trans('shopify::app.shopify.credential.index.accesstoken')"
-                                    :placeholder="trans('shopify::app.shopify.credential.index.accesstoken')"
+                                    :label="trans('shopify::app.shopify.credential.index.clientId')"
+                                    :placeholder="trans('shopify::app.shopify.credential.index.clientIdPlaceholder')"
                                 />
 
-                                <x-admin::form.control-group.error control-name="accessToken" />
+                                <x-admin::form.control-group.error control-name="clientId" />
                             </x-admin::form.control-group>
-                            
+
+                            <!-- Client Secret -->
+                            <x-admin::form.control-group>
+                                <x-admin::form.control-group.label class="required">
+                                    @lang('shopify::app.shopify.credential.index.clientSecret')
+                                </x-admin::form.control-group.label>
+
+                                <x-admin::form.control-group.control
+                                    type="password"
+                                    id="clientSecret"
+                                    name="clientSecret"
+                                    rules="required"
+                                    :label="trans('shopify::app.shopify.credential.index.clientSecret')"
+                                    :placeholder="trans('shopify::app.shopify.credential.index.clientSecretPlaceholder')"
+                                />
+
+                                <x-admin::form.control-group.error control-name="clientSecret" />
+                            </x-admin::form.control-group>
+
                             <x-admin::form.control-group class="mb-4">
                                 <x-admin::form.control-group.label class="required">
                                     @lang('shopify::app.shopify.credential.index.apiVersion')

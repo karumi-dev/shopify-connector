@@ -20,11 +20,14 @@ class ShopifyCredentialsConfig extends Model implements HistoryContract, Present
 
     protected $historyTags = ['shopify_credentials'];
 
-    protected $auditExclude = ['storeLocales', 'accessToken'];
+    protected $auditExclude = ['storeLocales', 'accessToken', 'clientSecret', 'tokenExpiresAt'];
 
     protected $fillable = [
         'shopUrl',
+        'clientId',
+        'clientSecret',
         'accessToken',
+        'tokenExpiresAt',
         'active',
         'apiVersion',
         'storelocaleMapping',
@@ -39,7 +42,18 @@ class ShopifyCredentialsConfig extends Model implements HistoryContract, Present
         'storelocaleMapping' => 'array',
         'storeLocales'       => 'array',
         'extras'             => 'array',
+        'accessToken'        => 'encrypted',
+        'clientSecret'       => 'encrypted',
+        'tokenExpiresAt'     => 'datetime',
     ];
+
+    /**
+     * Check if the current access token has expired.
+     */
+    public function isTokenExpired(): bool
+    {
+        return is_null($this->tokenExpiresAt) || $this->tokenExpiresAt->isPast();
+    }
 
     /**
      * custom history presenters to be used while displaying the history for that column

@@ -3,12 +3,15 @@
 namespace Webkul\Shopify\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 use Webkul\Admin\Http\Controllers\Controller;
 use Webkul\Shopify\DataGrids\Catalog\CredentialDataGrid;
+use Webkul\Shopify\Exceptions\InvalidCredential;
 use Webkul\Shopify\Helpers\ShoifyApiVersion;
 use Webkul\Shopify\Http\Requests\CredentialForm;
 use Webkul\Shopify\Repositories\ShopifyCredentialRepository;
+use Webkul\Shopify\Services\ShopifyTokenService;
 use Webkul\Shopify\Traits\ShopifyGraphqlRequest;
 
 class CredentialController extends Controller
@@ -20,7 +23,10 @@ class CredentialController extends Controller
      *
      * @return void
      */
-    public function __construct(protected ShopifyCredentialRepository $shopifyRepository) {}
+    public function __construct(
+        protected ShopifyCredentialRepository $shopifyRepository,
+        protected ShopifyTokenService $tokenService,
+    ) {}
 
     /**
      * Display a listing of the resource.
@@ -65,15 +71,30 @@ class CredentialController extends Controller
             ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        try {
+            $tokenData = $this->tokenService->fetchToken($url, $data['clientId'], $data['clientSecret']);
+        } catch (InvalidCredential $e) {
+            return new JsonResponse([
+                'errors' => [
+                    'clientId'     => [trans('shopify::app.shopify.credential.invalid')],
+                    'clientSecret' => [trans('shopify::app.shopify.credential.invalid')],
+                ],
+            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $data['accessToken'] = $tokenData['access_token'];
+        $expiresIn = $tokenData['expires_in'] ?? 86399;
+        $data['tokenExpiresAt'] = Carbon::now()->addSeconds($expiresIn - 60);
         $data['active'] = 1;
 
+        // Validate the token works by making a test GraphQL call
         $response = $this->requestGraphQlApiAction('getOneProduct', $data);
 
         if ($response['code'] != JsonResponse::HTTP_OK) {
             return new JsonResponse([
                 'errors' => [
-                    'shopUrl'     => [trans('shopify::app.shopify.credential.invalid')],
-                    'accessToken' => [trans('shopify::app.shopify.credential.invalid')],
+                    'clientId'     => [trans('shopify::app.shopify.credential.invalid')],
+                    'clientSecret' => [trans('shopify::app.shopify.credential.invalid')],
                 ],
             ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
@@ -85,7 +106,7 @@ class CredentialController extends Controller
         } catch (\Exception $e) {
             return new JsonResponse([
                 'errors' => [
-                    'shopUrl'     => [$e->getMessage()],
+                    'shopUrl' => [$e->getMessage()],
                 ],
             ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
@@ -136,7 +157,7 @@ class CredentialController extends Controller
 
         $apiVersion = (new ShoifyApiVersion)->getApiVersion();
 
-        $credential->accessToken = str_repeat('*', strlen($credential->accessToken));
+        $credential->clientSecret = str_repeat('*', 40);
 
         return view('shopify::credential.edit', compact('credential', 'shopLocales', 'publishingChannel', 'locationAll', 'apiVersion'));
     }
@@ -155,24 +176,55 @@ class CredentialController extends Controller
             abort(404);
         }
 
-        $token = str_repeat('*', strlen($credential->accessToken));
-
-        if (str_contains($requestData['accessToken'], $token)) {
-            $requestData['accessToken'] = $credential->accessToken;
-        }
-
         $params = $this->validate(request(), [
-            'shopUrl'     => 'required|url',
-            'accessToken' => 'required',
+            'shopUrl'      => 'required|url',
+            'clientId'     => 'required',
+            'clientSecret' => 'required',
         ]);
 
-        $response = $this->requestGraphQlApiAction('getOneProduct', $requestData);
+        $maskedSecret = str_repeat('*', 40);
+
+        if (str_contains($requestData['clientSecret'] ?? '', $maskedSecret)) {
+            $requestData['clientSecret'] = $credential->clientSecret;
+        }
+
+        // Re-validate credentials if clientId or clientSecret changed
+        $credentialsChanged = $requestData['clientId'] !== $credential->clientId
+            || $requestData['clientSecret'] !== $credential->clientSecret;
+
+        if ($credentialsChanged) {
+            try {
+                $tokenData = $this->tokenService->fetchToken(
+                    $requestData['shopUrl'],
+                    $requestData['clientId'],
+                    $requestData['clientSecret']
+                );
+
+                $requestData['accessToken'] = $tokenData['access_token'];
+                $expiresIn = $tokenData['expires_in'] ?? 86399;
+                $requestData['tokenExpiresAt'] = Carbon::now()->addSeconds($expiresIn - 60);
+            } catch (InvalidCredential $e) {
+                return redirect()->route('shopify.credentials.edit', $id)
+                    ->withErrors([
+                        'clientId'     => trans('shopify::app.shopify.credential.invalid'),
+                        'clientSecret' => trans('shopify::app.shopify.credential.invalid'),
+                    ])
+                    ->withInput();
+            }
+        }
+
+        // Validate the credentials work with a test GraphQL call
+        $testData = $requestData;
+        $testData['accessToken'] = $testData['accessToken'] ?? $credential->accessToken;
+        $testData['apiVersion'] = $testData['apiVersion'] ?? $credential->apiVersion;
+
+        $response = $this->requestGraphQlApiAction('getOneProduct', $testData);
 
         if ($response['code'] != 200) {
             return redirect()->route('shopify.credentials.edit', $id)
                 ->withErrors([
-                    'shopUrl'     => trans('shopify::app.shopify.credential.invalid'),
-                    'accessToken' => trans('shopify::app.shopify.credential.invalid'),
+                    'clientId'     => trans('shopify::app.shopify.credential.invalid'),
+                    'clientSecret' => trans('shopify::app.shopify.credential.invalid'),
                 ])
                 ->withInput();
         }
