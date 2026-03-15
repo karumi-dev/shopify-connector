@@ -18,6 +18,8 @@ class CategoryIterator implements \Iterator
 
     private $mergedOptions;
 
+    private bool $isFirstFetch = true;
+
     public function __construct($credential)
     {
         $this->credential = $credential;
@@ -91,6 +93,11 @@ class CategoryIterator implements \Iterator
             $mutationType = $this->cursor ? 'GetCollectionsByCursor' : 'manualCollectionGetting';
             $graphResponse = $this->requestGraphQlApiAction($mutationType, $this->credential, $variables);
 
+            if (! empty($graphResponse['body']['errors'])) {
+                $errorMessages = array_column($graphResponse['body']['errors'], 'message');
+                throw new \RuntimeException('Shopify GraphQL error: '.implode('; ', $errorMessages));
+            }
+
             $edges = $graphResponse['body']['data']['collections']['edges'] ?? [];
 
             $this->currentPageData = $edges;
@@ -98,7 +105,13 @@ class CategoryIterator implements \Iterator
             $this->cursor = ! empty($edges) ? end($edges)['cursor'] : null;
 
         } catch (\Exception $e) {
-            error_log($e->getMessage());
+            if ($this->isFirstFetch) {
+                throw $e;
+            }
+
+            \Illuminate\Support\Facades\Log::error('Shopify CategoryIterator pagination error: '.$e->getMessage());
+        } finally {
+            $this->isFirstFetch = false;
         }
 
         $this->currentKey = 0;
