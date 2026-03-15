@@ -34,13 +34,13 @@ it('should display the create shopify credentials form if has permission', funct
             'expires_in'   => 86399,
             'scope'        => 'read_products,write_products',
         ], 200),
-        'https://test.myshopify.com/admin/api/2025-01/graphql.json' => Http::response(['code' => 200], 200),
+        'https://test.myshopify.com/admin/api/2026-01/graphql.json' => Http::response(['code' => 200], 200),
     ]);
 
     $shopifyCredential = [
         'clientId'     => 'test_client_id',
         'clientSecret' => 'test_client_secret',
-        'apiVersion'   => '2025-01',
+        'apiVersion'   => '2026-01',
         'shopUrl'      => 'https://test.myshopify.com',
     ];
 
