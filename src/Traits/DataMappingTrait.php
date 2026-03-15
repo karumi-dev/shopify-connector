@@ -125,10 +125,9 @@ trait DataMappingTrait
             $this->shopifyMappingRepository->delete($mapping[0]['id']);
 
             $credential = [
-                'id'          => $this->credential->id,
-                'shopUrl'     => $this->credential->shopUrl,
-                'accessToken' => $this->credential->accessToken,
-                'apiVersion'  => $this->credential->apiVersion,
+                'id'         => $this->credential->id,
+                'shopUrl'    => $this->credential->shopUrl,
+                'apiVersion' => $this->credential->apiVersion,
             ];
 
             unset($formateItem['id']);

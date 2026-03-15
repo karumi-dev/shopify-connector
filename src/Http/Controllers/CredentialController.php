@@ -258,7 +258,8 @@ class CredentialController extends Controller
         unset($requestData['salesChannel']);
         unset($requestData['locations']);
 
-        $this->shopifyRepository->update($requestData, $id);
+        $credential->fill($requestData);
+        $credential->save();
 
         session()->flash('success', trans('shopify::app.shopify.credential.update-success'));
 

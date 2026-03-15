@@ -121,10 +121,9 @@ class Importer extends AbstractImporter
         }
 
         $this->credentialArray = [
-            'id'          => $this->credential?->id,
-            'shopUrl'     => $this->credential?->shopUrl,
-            'accessToken' => $this->credential?->accessToken,
-            'apiVersion'  => $this->credential?->apiVersion,
+            'id'         => $this->credential?->id,
+            'shopUrl'    => $this->credential?->shopUrl,
+            'apiVersion' => $this->credential?->apiVersion,
         ];
 
         $attributeAndOption = new \ArrayIterator($this->productOptionByCursor());

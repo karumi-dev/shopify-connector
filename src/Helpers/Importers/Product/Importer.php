@@ -256,10 +256,9 @@ class Importer extends AbstractImporter
         }
 
         $this->credentialArray = [
-            'id'          => $this->credential?->id,
-            'shopUrl'     => $this->credential?->shopUrl,
-            'accessToken' => $this->credential?->accessToken,
-            'apiVersion'  => $this->credential?->apiVersion,
+            'id'         => $this->credential?->id,
+            'shopUrl'    => $this->credential?->shopUrl,
+            'apiVersion' => $this->credential?->apiVersion,
         ];
 
         $products = new \Webkul\Shopify\Helpers\Iterator\ProductIterator($this->credentialArray);
@@ -304,10 +303,9 @@ class Importer extends AbstractImporter
                 ];
 
                 $this->credentialArray = [
-                    'id'          => $this->credential?->id,
-                    'shopUrl'     => $this->credential?->shopUrl,
-                    'accessToken' => $this->credential?->accessToken,
-                    'apiVersion'  => $this->credential?->apiVersion,
+                    'id'         => $this->credential?->id,
+                    'shopUrl'    => $this->credential?->shopUrl,
+                    'apiVersion' => $this->credential?->apiVersion,
                 ];
 
                 $data = $this->requestGraphQlApiAction('gettingRemaingVariant', $this->credentialArray, $variables);
