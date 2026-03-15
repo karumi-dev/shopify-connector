@@ -1,5 +1,5 @@
 {
-    "name": "karumi-dev/shopify-connector.git",
+    "name": "karumi-dev/shopify-connector",
     "description": "A Shopify integration package for Unopim, enabling seamless product data synchronization between Unopim and Shopify.",
     "type": "library",
     "license": "MIT",    
