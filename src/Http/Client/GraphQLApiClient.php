@@ -344,7 +344,7 @@ class GraphQLApiClient
         ],
 
         'getignLocations' => [
-            'query'  => '{ locations(first: 80, includeLegacy: true) { edges { node { id name  fulfillmentService { id } } } } }',
+            'query'  => '{ locations(first: 80, includeLegacy: true, includeInactive: false) { edges { node { id name } } } }',
             'method' => 'POST',
         ],
 
