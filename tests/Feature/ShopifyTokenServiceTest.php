@@ -68,7 +68,7 @@ it('should throw InvalidCredential on 403 response', function () {
 })->throws(InvalidCredential::class, 'Insufficient access scopes');
 
 it('should return cached token when not expired', function () {
-    $credential = ShopifyCredentialsConfig::factory()->create([
+    $credential = ShopifyCredentialsConfig::factory()->oauth()->create([
         'shopUrl'        => 'https://cached.myshopify.com',
         'accessToken'    => 'cached_valid_token',
         'tokenExpiresAt' => Carbon::now()->addHours(12),
@@ -88,7 +88,7 @@ it('should return cached token when not expired', function () {
 });
 
 it('should auto-refresh when token is expired', function () {
-    $credential = ShopifyCredentialsConfig::factory()->create([
+    $credential = ShopifyCredentialsConfig::factory()->oauth()->create([
         'shopUrl'        => 'https://expired.myshopify.com',
         'accessToken'    => 'old_expired_token',
         'tokenExpiresAt' => Carbon::now()->subHour(),
@@ -117,7 +117,7 @@ it('should auto-refresh when token is expired', function () {
 });
 
 it('should apply 60-second expiry buffer', function () {
-    $credential = ShopifyCredentialsConfig::factory()->create([
+    $credential = ShopifyCredentialsConfig::factory()->oauth()->create([
         'shopUrl'        => 'https://buffer.myshopify.com',
         'accessToken'    => 'old_token',
         'tokenExpiresAt' => Carbon::now()->subMinute(),
@@ -144,7 +144,7 @@ it('should apply 60-second expiry buffer', function () {
 });
 
 it('should refresh when tokenExpiresAt is null', function () {
-    $credential = ShopifyCredentialsConfig::factory()->create([
+    $credential = ShopifyCredentialsConfig::factory()->oauth()->create([
         'shopUrl'        => 'https://null-expiry.myshopify.com',
         'accessToken'    => 'some_token',
         'tokenExpiresAt' => null,

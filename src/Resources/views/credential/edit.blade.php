@@ -67,43 +67,64 @@
                         <x-admin::form.control-group.error control-name="shopUrl" />
                     </x-admin::form.control-group>
 
-                    <!-- Client ID -->
-                    <x-admin::form.control-group class="w-[525px]">
-                        <x-admin::form.control-group.label class="required">
-                            @lang('shopify::app.shopify.credential.index.clientId')
-                        </x-admin::form.control-group.label>
+                    @if ($isOAuthMode)
+                        <!-- Client ID -->
+                        <x-admin::form.control-group class="w-[525px]">
+                            <x-admin::form.control-group.label class="required">
+                                @lang('shopify::app.shopify.credential.index.clientId')
+                            </x-admin::form.control-group.label>
 
-                        <x-admin::form.control-group.control
-                            type="text"
-                            id="clientId"
-                            name="clientId"
-                            rules="required"
-                            :value="old('clientId') ?? $credential->clientId"
-                            :label="trans('shopify::app.shopify.credential.index.clientId')"
-                            :placeholder="trans('shopify::app.shopify.credential.index.clientIdPlaceholder')"
-                        />
+                            <x-admin::form.control-group.control
+                                type="text"
+                                id="clientId"
+                                name="clientId"
+                                rules="required"
+                                :value="old('clientId') ?? $credential->clientId"
+                                :label="trans('shopify::app.shopify.credential.index.clientId')"
+                                :placeholder="trans('shopify::app.shopify.credential.index.clientIdPlaceholder')"
+                            />
 
-                        <x-admin::form.control-group.error control-name="clientId" />
-                    </x-admin::form.control-group>
+                            <x-admin::form.control-group.error control-name="clientId" />
+                        </x-admin::form.control-group>
 
-                    <!-- Client Secret -->
-                    <x-admin::form.control-group class="w-[525px]">
-                        <x-admin::form.control-group.label class="required">
-                            @lang('shopify::app.shopify.credential.index.clientSecret')
-                        </x-admin::form.control-group.label>
+                        <!-- Client Secret -->
+                        <x-admin::form.control-group class="w-[525px]">
+                            <x-admin::form.control-group.label class="required">
+                                @lang('shopify::app.shopify.credential.index.clientSecret')
+                            </x-admin::form.control-group.label>
 
-                        <x-admin::form.control-group.control
-                            type="password"
-                            id="clientSecret"
-                            name="clientSecret"
-                            rules="required"
-                            :value="old('clientSecret') ?? $credential->clientSecret"
-                            :label="trans('shopify::app.shopify.credential.index.clientSecret')"
-                            :placeholder="trans('shopify::app.shopify.credential.index.clientSecretPlaceholder')"
-                        />
+                            <x-admin::form.control-group.control
+                                type="password"
+                                id="clientSecret"
+                                name="clientSecret"
+                                rules="required"
+                                :value="old('clientSecret') ?? $credential->clientSecret"
+                                :label="trans('shopify::app.shopify.credential.index.clientSecret')"
+                                :placeholder="trans('shopify::app.shopify.credential.index.clientSecretPlaceholder')"
+                            />
 
-                        <x-admin::form.control-group.error control-name="clientSecret" />
-                    </x-admin::form.control-group>
+                            <x-admin::form.control-group.error control-name="clientSecret" />
+                        </x-admin::form.control-group>
+                    @else
+                        <!-- Access Token -->
+                        <x-admin::form.control-group class="w-[525px]">
+                            <x-admin::form.control-group.label class="required">
+                                @lang('shopify::app.shopify.credential.index.accessToken')
+                            </x-admin::form.control-group.label>
+
+                            <x-admin::form.control-group.control
+                                type="password"
+                                id="accessToken"
+                                name="accessToken"
+                                rules="required"
+                                :value="old('accessToken') ?? $credential->accessToken"
+                                :label="trans('shopify::app.shopify.credential.index.accessToken')"
+                                :placeholder="trans('shopify::app.shopify.credential.index.accessTokenPlaceholder')"
+                            />
+
+                            <x-admin::form.control-group.error control-name="accessToken" />
+                        </x-admin::form.control-group>
+                    @endif
 
                     <x-admin::form.control-group class="mb-4 w-[525px]">
                         <x-admin::form.control-group.label class="required">

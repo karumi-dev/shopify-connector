@@ -23,12 +23,21 @@ class ShopifyCredentialFactory extends Factory
     public function definition()
     {
         return [
-            'shopUrl'        => 'https://demotest.myshopify.com',
-            'apiVersion'     => '2026-01',
+            'shopUrl'     => 'https://demotest.myshopify.com',
+            'apiVersion'  => '2026-01',
+            'accessToken' => 'fake-access-token',
+        ];
+    }
+
+    /**
+     * State for OAuth (client credentials) mode.
+     */
+    public function oauth(): static
+    {
+        return $this->state(fn () => [
             'clientId'       => 'fake-client-id',
             'clientSecret'   => 'fake-client-secret',
-            'accessToken'    => 'fake-access-token',
             'tokenExpiresAt' => now()->addDay(),
-        ];
+        ]);
     }
 }

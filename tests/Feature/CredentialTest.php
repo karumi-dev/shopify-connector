@@ -29,30 +29,55 @@ it('should returns the shopify credential edit page', function () {
         ->assertStatus(200);
 });
 
-it('should create the shopify credential with valid input', function () {
+it('should create the shopify credential with access token', function () {
     $this->loginAsAdmin();
 
     Http::fake([
-        'https://test.myshopify.com/admin/oauth/access_token' => Http::response([
-            'access_token' => 'new_oauth_token',
-            'expires_in'   => 86399,
-            'scope'        => 'read_products,write_products',
-        ], 200),
         'https://test.myshopify.com/admin/api/2026-01/graphql.json' => Http::response(['code' => 200], 200),
     ]);
 
     $shopifyCredential = [
-        'clientId'     => 'test_client_id',
-        'clientSecret' => 'test_client_secret',
-        'apiVersion'   => '2026-01',
-        'shopUrl'      => 'https://test.myshopify.com',
+        'accessToken' => 'shpat_test_token_123',
+        'apiVersion'  => '2026-01',
+        'shopUrl'     => 'https://test.myshopify.com',
     ];
 
     post(route('shopify.credentials.store'), $shopifyCredential)
         ->assertStatus(200);
 
     $this->assertDatabaseHas('wk_shopify_credentials_config', [
-        'shopUrl'  => 'https://test.myshopify.com',
+        'shopUrl' => 'https://test.myshopify.com',
+    ]);
+
+    // Verify clientId is null (access token mode)
+    $credential = ShopifyCredentialsConfig::where('shopUrl', 'https://test.myshopify.com')->first();
+    expect($credential->clientId)->toBeNull();
+});
+
+it('should create the shopify credential with client credentials', function () {
+    $this->loginAsAdmin();
+
+    Http::fake([
+        'https://oauth-test.myshopify.com/admin/oauth/access_token' => Http::response([
+            'access_token' => 'new_oauth_token',
+            'expires_in'   => 86399,
+            'scope'        => 'read_products,write_products',
+        ], 200),
+        'https://oauth-test.myshopify.com/admin/api/2026-01/graphql.json' => Http::response(['code' => 200], 200),
+    ]);
+
+    $shopifyCredential = [
+        'clientId'     => 'test_client_id',
+        'clientSecret' => 'test_client_secret',
+        'apiVersion'   => '2026-01',
+        'shopUrl'      => 'https://oauth-test.myshopify.com',
+    ];
+
+    post(route('shopify.credentials.store'), $shopifyCredential)
+        ->assertStatus(200);
+
+    $this->assertDatabaseHas('wk_shopify_credentials_config', [
+        'shopUrl'  => 'https://oauth-test.myshopify.com',
         'clientId' => 'test_client_id',
     ]);
 });
@@ -61,10 +86,9 @@ it('should return error for invalid URL during credential create', function () {
     $this->loginAsAdmin();
 
     $shopifyCredential = [
-        'clientId'     => 'test_client_id',
-        'clientSecret' => 'test_client_secret',
-        'apiVersion'   => '2026-01',
-        'shopUrl'      => 'test.myshopify.com',
+        'accessToken' => 'shpat_test_token',
+        'apiVersion'  => '2026-01',
+        'shopUrl'     => 'test.myshopify.com',
     ];
 
     $response = post(route('shopify.credentials.store'), $shopifyCredential)
@@ -74,7 +98,7 @@ it('should return error for invalid URL during credential create', function () {
     $this->assertEquals(trans('shopify::app.shopify.credential.invalidurl'), $response->json('errors.shopUrl.0'));
 });
 
-it('should return error for invalid credentials', function () {
+it('should return error for invalid client credentials', function () {
     $this->loginAsAdmin();
 
     Http::fake([
@@ -98,10 +122,59 @@ it('should return error for invalid credentials', function () {
     $this->assertEquals(trans('shopify::app.shopify.credential.invalid'), $response->json('errors.clientSecret.0'));
 });
 
-it('should update the shopify credential successfully', function () {
+it('should return error for invalid access token', function () {
+    $this->loginAsAdmin();
+
+    Http::fake([
+        'https://test2.myshopify.com/admin/api/2026-01/graphql.json' => Http::response(['errors' => 'Unauthorized'], 401),
+    ]);
+
+    $shopifyCredential = [
+        'accessToken' => 'shpat_bad_token',
+        'apiVersion'  => '2026-01',
+        'shopUrl'     => 'https://test2.myshopify.com',
+    ];
+
+    $response = post(route('shopify.credentials.store'), $shopifyCredential)
+        ->assertStatus(422);
+
+    $this->assertArrayHasKey('errors', $response->json());
+    $this->assertEquals(trans('shopify::app.shopify.credential.invalid'), $response->json('errors.accessToken.0'));
+});
+
+it('should update the shopify credential with access token mode', function () {
     $this->loginAsAdmin();
 
     $credential = ShopifyCredentialsConfig::factory()->create([
+        'shopUrl'    => 'https://test.myshopify.com',
+        'apiVersion' => '2026-01',
+    ]);
+
+    Http::fake([
+        'https://test.myshopify.com/admin/api/2026-01/graphql.json' => Http::response(['code' => 200], 200),
+    ]);
+
+    $maskedToken = str_repeat('*', 40);
+
+    $updatedData = [
+        'shopUrl'      => 'https://test.myshopify.com',
+        'accessToken'  => $maskedToken,
+        'storeLocales' => json_encode([['locale' => 'en', 'primary' => true]]),
+        'salesChannel' => 'online',
+        'locations'    => 'location1',
+        'apiVersion'   => '2026-01',
+    ];
+
+    $response = $this->put(route('shopify.credentials.update', ['id' => $credential->id]), $updatedData);
+
+    $response->assertRedirect(route('shopify.credentials.edit', ['id' => $credential->id]));
+    $response->assertSessionHas('success', trans('shopify::app.shopify.credential.update-success'));
+});
+
+it('should update the shopify credential with OAuth mode', function () {
+    $this->loginAsAdmin();
+
+    $credential = ShopifyCredentialsConfig::factory()->oauth()->create([
         'shopUrl'      => 'https://test.myshopify.com',
         'apiVersion'   => '2026-01',
         'clientId'     => 'original_client_id',
@@ -141,18 +214,17 @@ it('should returns the shopify credential edit page, with validation', function 
 
     $shopifyCredential = ShopifyCredentialsConfig::factory()->create();
     $updatedCredential = [
-        'id'           => $shopifyCredential->id,
-        'clientId'     => '',
-        'clientSecret' => '',
-        'apiVersion'   => $shopifyCredential->apiVersion,
-        'shopUrl'      => $shopifyCredential->shopUrl,
+        'id'          => $shopifyCredential->id,
+        'accessToken' => '',
+        'apiVersion'  => $shopifyCredential->apiVersion,
+        'shopUrl'     => $shopifyCredential->shopUrl,
         'storeLocales' => [],
-        'active'       => 0,
+        'active'      => 0,
     ];
 
     put(route('shopify.credentials.update', $shopifyCredential->id), $updatedCredential)
         ->assertStatus(302)
-        ->assertSessionHasErrors(['clientId', 'clientSecret']);
+        ->assertSessionHasErrors(['accessToken']);
 });
 
 it('should delete the shopify credential', function () {

@@ -71,30 +71,36 @@ class CredentialController extends Controller
             ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        try {
-            $tokenData = $this->tokenService->fetchToken($url, $data['clientId'], $data['clientSecret']);
-        } catch (InvalidCredential $e) {
-            return new JsonResponse([
-                'errors' => [
-                    'clientId'     => [trans('shopify::app.shopify.credential.invalid')],
-                    'clientSecret' => [trans('shopify::app.shopify.credential.invalid')],
-                ],
-            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        $hasOAuth = ! empty($data['clientId']) && ! empty($data['clientSecret']);
+
+        if ($hasOAuth) {
+            try {
+                $tokenData = $this->tokenService->fetchToken($url, $data['clientId'], $data['clientSecret']);
+            } catch (InvalidCredential $e) {
+                return new JsonResponse([
+                    'errors' => [
+                        'clientId'     => [trans('shopify::app.shopify.credential.invalid')],
+                        'clientSecret' => [trans('shopify::app.shopify.credential.invalid')],
+                    ],
+                ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $data['accessToken'] = $tokenData['access_token'];
+            $expiresIn = $tokenData['expires_in'] ?? 86399;
+            $data['tokenExpiresAt'] = Carbon::now()->addSeconds($expiresIn - 60);
         }
 
-        $data['accessToken'] = $tokenData['access_token'];
-        $expiresIn = $tokenData['expires_in'] ?? 86399;
-        $data['tokenExpiresAt'] = Carbon::now()->addSeconds($expiresIn - 60);
         $data['active'] = 1;
 
         // Validate the token works by making a test GraphQL call
         $response = $this->requestGraphQlApiAction('getOneProduct', $data);
 
         if ($response['code'] != JsonResponse::HTTP_OK) {
+            $errorField = $hasOAuth ? 'clientId' : 'accessToken';
+
             return new JsonResponse([
                 'errors' => [
-                    'clientId'     => [trans('shopify::app.shopify.credential.invalid')],
-                    'clientSecret' => [trans('shopify::app.shopify.credential.invalid')],
+                    $errorField => [trans('shopify::app.shopify.credential.invalid')],
                 ],
             ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
@@ -157,9 +163,14 @@ class CredentialController extends Controller
 
         $apiVersion = (new ShoifyApiVersion)->getApiVersion();
 
+        $isOAuthMode = ! empty($credential->clientId);
         $credential->clientSecret = str_repeat('*', 40);
 
-        return view('shopify::credential.edit', compact('credential', 'shopLocales', 'publishingChannel', 'locationAll', 'apiVersion'));
+        if (! $isOAuthMode) {
+            $credential->accessToken = str_repeat('*', 40);
+        }
+
+        return view('shopify::credential.edit', compact('credential', 'shopLocales', 'publishingChannel', 'locationAll', 'apiVersion', 'isOAuthMode'));
     }
 
     /**
@@ -176,40 +187,56 @@ class CredentialController extends Controller
             abort(404);
         }
 
-        $params = $this->validate(request(), [
-            'shopUrl'      => 'required|url',
-            'clientId'     => 'required',
-            'clientSecret' => 'required',
-        ]);
+        $isOAuthMode = ! empty($credential->clientId);
 
-        $maskedSecret = str_repeat('*', 40);
-
-        if (str_contains($requestData['clientSecret'] ?? '', $maskedSecret)) {
-            $requestData['clientSecret'] = $credential->clientSecret;
+        if ($isOAuthMode) {
+            $params = $this->validate(request(), [
+                'shopUrl'      => 'required|url',
+                'clientId'     => 'required',
+                'clientSecret' => 'required',
+            ]);
+        } else {
+            $params = $this->validate(request(), [
+                'shopUrl'      => 'required|url',
+                'accessToken'  => 'required',
+            ]);
         }
 
-        // Re-validate credentials if clientId or clientSecret changed
-        $credentialsChanged = $requestData['clientId'] !== $credential->clientId
-            || $requestData['clientSecret'] !== $credential->clientSecret;
+        $maskedValue = str_repeat('*', 40);
 
-        if ($credentialsChanged) {
-            try {
-                $tokenData = $this->tokenService->fetchToken(
-                    $requestData['shopUrl'],
-                    $requestData['clientId'],
-                    $requestData['clientSecret']
-                );
+        if ($isOAuthMode) {
+            if (str_contains($requestData['clientSecret'] ?? '', $maskedValue)) {
+                $requestData['clientSecret'] = $credential->clientSecret;
+            }
 
-                $requestData['accessToken'] = $tokenData['access_token'];
-                $expiresIn = $tokenData['expires_in'] ?? 86399;
-                $requestData['tokenExpiresAt'] = Carbon::now()->addSeconds($expiresIn - 60);
-            } catch (InvalidCredential $e) {
-                return redirect()->route('shopify.credentials.edit', $id)
-                    ->withErrors([
-                        'clientId'     => trans('shopify::app.shopify.credential.invalid'),
-                        'clientSecret' => trans('shopify::app.shopify.credential.invalid'),
-                    ])
-                    ->withInput();
+            // Re-validate credentials if clientId or clientSecret changed
+            $credentialsChanged = $requestData['clientId'] !== $credential->clientId
+                || $requestData['clientSecret'] !== $credential->clientSecret;
+
+            if ($credentialsChanged) {
+                try {
+                    $tokenData = $this->tokenService->fetchToken(
+                        $requestData['shopUrl'],
+                        $requestData['clientId'],
+                        $requestData['clientSecret']
+                    );
+
+                    $requestData['accessToken'] = $tokenData['access_token'];
+                    $expiresIn = $tokenData['expires_in'] ?? 86399;
+                    $requestData['tokenExpiresAt'] = Carbon::now()->addSeconds($expiresIn - 60);
+                } catch (InvalidCredential $e) {
+                    return redirect()->route('shopify.credentials.edit', $id)
+                        ->withErrors([
+                            'clientId'     => trans('shopify::app.shopify.credential.invalid'),
+                            'clientSecret' => trans('shopify::app.shopify.credential.invalid'),
+                        ])
+                        ->withInput();
+                }
+            }
+        } else {
+            // Access token mode
+            if (str_contains($requestData['accessToken'] ?? '', $maskedValue)) {
+                $requestData['accessToken'] = $credential->accessToken;
             }
         }
 
@@ -221,10 +248,11 @@ class CredentialController extends Controller
         $response = $this->requestGraphQlApiAction('getOneProduct', $testData);
 
         if ($response['code'] != 200) {
+            $errorField = $isOAuthMode ? 'clientId' : 'accessToken';
+
             return redirect()->route('shopify.credentials.edit', $id)
                 ->withErrors([
-                    'clientId'     => trans('shopify::app.shopify.credential.invalid'),
-                    'clientSecret' => trans('shopify::app.shopify.credential.invalid'),
+                    $errorField => trans('shopify::app.shopify.credential.invalid'),
                 ])
                 ->withInput();
         }

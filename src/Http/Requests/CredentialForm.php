@@ -15,8 +15,9 @@ class CredentialForm extends FormRequest
     {
         return [
             'shopUrl'      => 'required|unique:wk_shopify_credentials_config',
-            'clientId'     => 'required',
-            'clientSecret' => 'required',
+            'accessToken'  => 'nullable|required_without_all:clientId,clientSecret',
+            'clientId'     => 'nullable|required_without:accessToken',
+            'clientSecret' => 'nullable|required_without:accessToken',
             'apiVersion'   => 'required',
         ];
     }

@@ -89,8 +89,41 @@
                                 <x-admin::form.control-group.error control-name="shopUrl" />
                             </x-admin::form.control-group>
 
-                            <!-- Client ID -->
+                            <!-- Authentication Method -->
                             <x-admin::form.control-group>
+                                <x-admin::form.control-group.label class="required">
+                                    @lang('shopify::app.shopify.credential.index.authMethod')
+                                </x-admin::form.control-group.label>
+
+                                <select
+                                    v-model="authMode"
+                                    class="w-full rounded-md border px-3 py-2.5 text-sm text-gray-600 transition-all hover:border-gray-400 dark:border-cherry-800 dark:bg-cherry-900 dark:text-gray-300"
+                                >
+                                    <option value="access_token">@lang('shopify::app.shopify.credential.index.authAccessToken')</option>
+                                    <option value="client_credentials">@lang('shopify::app.shopify.credential.index.authClientCredentials')</option>
+                                </select>
+                            </x-admin::form.control-group>
+
+                            <!-- Access Token (for Custom Apps) -->
+                            <x-admin::form.control-group v-if="authMode === 'access_token'">
+                                <x-admin::form.control-group.label class="required">
+                                    @lang('shopify::app.shopify.credential.index.accessToken')
+                                </x-admin::form.control-group.label>
+
+                                <x-admin::form.control-group.control
+                                    type="password"
+                                    id="accessToken"
+                                    name="accessToken"
+                                    ::rules="authMode === 'access_token' ? 'required' : ''"
+                                    :label="trans('shopify::app.shopify.credential.index.accessToken')"
+                                    :placeholder="trans('shopify::app.shopify.credential.index.accessTokenPlaceholder')"
+                                />
+
+                                <x-admin::form.control-group.error control-name="accessToken" />
+                            </x-admin::form.control-group>
+
+                            <!-- Client ID (for Organization Apps) -->
+                            <x-admin::form.control-group v-if="authMode === 'client_credentials'">
                                 <x-admin::form.control-group.label class="required">
                                     @lang('shopify::app.shopify.credential.index.clientId')
                                 </x-admin::form.control-group.label>
@@ -99,7 +132,7 @@
                                     type="text"
                                     id="clientId"
                                     name="clientId"
-                                    rules="required"
+                                    ::rules="authMode === 'client_credentials' ? 'required' : ''"
                                     :label="trans('shopify::app.shopify.credential.index.clientId')"
                                     :placeholder="trans('shopify::app.shopify.credential.index.clientIdPlaceholder')"
                                 />
@@ -107,8 +140,8 @@
                                 <x-admin::form.control-group.error control-name="clientId" />
                             </x-admin::form.control-group>
 
-                            <!-- Client Secret -->
-                            <x-admin::form.control-group>
+                            <!-- Client Secret (for Organization Apps) -->
+                            <x-admin::form.control-group v-if="authMode === 'client_credentials'">
                                 <x-admin::form.control-group.label class="required">
                                     @lang('shopify::app.shopify.credential.index.clientSecret')
                                 </x-admin::form.control-group.label>
@@ -117,7 +150,7 @@
                                     type="password"
                                     id="clientSecret"
                                     name="clientSecret"
-                                    rules="required"
+                                    ::rules="authMode === 'client_credentials' ? 'required' : ''"
                                     :label="trans('shopify::app.shopify.credential.index.clientSecret')"
                                     :placeholder="trans('shopify::app.shopify.credential.index.clientSecretPlaceholder')"
                                 />
@@ -171,6 +204,12 @@
         <script type="module">
             app.component('v-credential', {
                 template: '#v-credential-template',
+
+                data() {
+                    return {
+                        authMode: 'access_token',
+                    };
+                },
 
                 methods: {
                     create(params, { setErrors }) {

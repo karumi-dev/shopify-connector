@@ -29,19 +29,13 @@ it('should display the create shopify credentials form if has permission', funct
     $this->loginWithPermissions(permissions: ['shopify.credentials.create']);
 
     Http::fake([
-        'https://test.myshopify.com/admin/oauth/access_token' => Http::response([
-            'access_token' => 'new_oauth_token',
-            'expires_in'   => 86399,
-            'scope'        => 'read_products,write_products',
-        ], 200),
         'https://test.myshopify.com/admin/api/2026-01/graphql.json' => Http::response(['code' => 200], 200),
     ]);
 
     $shopifyCredential = [
-        'clientId'     => 'test_client_id',
-        'clientSecret' => 'test_client_secret',
-        'apiVersion'   => '2026-01',
-        'shopUrl'      => 'https://test.myshopify.com',
+        'accessToken' => 'shpat_test_token',
+        'apiVersion'  => '2026-01',
+        'shopUrl'     => 'https://test.myshopify.com',
     ];
 
     $this->post(route('shopify.credentials.store'), $shopifyCredential)
@@ -59,6 +53,10 @@ it('should display the shopify credentials edit form if has permission', functio
     $this->loginWithPermissions(permissions: ['shopify.credentials.edit']);
 
     $shopifyCredential = ShopifyCredentialsConfig::factory()->create();
+
+    Http::fake([
+        'https://demotest.myshopify.com/admin/api/2026-01/graphql.json' => Http::response(['data' => ['shopLocales' => []]], 200),
+    ]);
 
     $this->get(route('shopify.credentials.edit', ['id' => $shopifyCredential->id]))
         ->assertStatus(200);
