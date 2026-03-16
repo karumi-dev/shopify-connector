@@ -98,9 +98,13 @@ test.describe.serial('Shopify Create credential Page', () => {
   });
 
   test('Credential creation with the valid data', async ({ page }) => {
+    const shopUrl = process.env.E2E_SHOPIFY_URL;
+    const accessToken = process.env.E2E_SHOPIFY_TOKEN;
+    test.skip(!shopUrl || !accessToken, 'Shopify credentials not configured: set E2E_SHOPIFY_URL and E2E_SHOPIFY_TOKEN env vars');
+
     await page.getByRole('button', { name: 'Create Credential' }).click();
-    await page.getByRole('textbox', { name: 'http://demo.myshopify.com' }).fill('http://quickstart-c2b9e6cf.myshopify.com');
-    await page.getByRole('textbox', { name: 'Admin API access token' }).fill('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');
+    await page.getByRole('textbox', { name: 'http://demo.myshopify.com' }).fill(shopUrl);
+    await page.getByRole('textbox', { name: 'Admin API access token' }).fill(accessToken);
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByRole('banner')).toBeVisible();
     await expect(page.locator('body')).toContainText('Credential Created Success');
@@ -133,7 +137,9 @@ test.describe.serial('Shopify Create credential Page', () => {
   });
 
   test('Delete the credential', async ({ page }) => {
-    await expect(page.locator('#app')).toContainText('http://quickstart-c2b9e6cf.myshopify.com');
+    const shopUrl = process.env.E2E_SHOPIFY_URL;
+    test.skip(!shopUrl, 'Shopify credentials not configured: set E2E_SHOPIFY_URL env var');
+    await expect(page.locator('#app')).toContainText(shopUrl);
     await expect(page.getByTitle('Delete')).toBeVisible();
     await page.getByTitle('Delete').click();
     await expect(page.getByText('Are you sure you want to')).toBeVisible();

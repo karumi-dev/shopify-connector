@@ -259,7 +259,7 @@ class CredentialController extends Controller
 
         $keyOrder = ['name', 'locale', 'primary', 'published'];
 
-        $languages = json_decode($requestData['storeLocales'], true);
+        $languages = json_decode($requestData['storeLocales'] ?? '[]', true) ?? [];
 
         $languages = array_map(function ($item) use ($keyOrder) {
             return array_merge(array_flip($keyOrder), $item);

@@ -1,8 +1,8 @@
-import { chromium } from '@playwright/test';
+import { firefox } from '@playwright/test';
 import fs from 'fs';
 
 async function globalSetup() {
-    const browser = await chromium.launch(); // Use chromium, Playwright handles cross-browser storage
+    const browser = await firefox.launch();
     const context = await browser.newContext();
     const page = await context.newPage();
 
@@ -23,7 +23,7 @@ async function globalSetup() {
         throw new Error('Auth storage file was not created.');
     }
 
-    // await browser.close();
+    await browser.close();
 }
 
 export default globalSetup;
