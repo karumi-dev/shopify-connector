@@ -2,6 +2,7 @@
 
 namespace Webkul\Shopify\Traits;
 
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage as StorageFacade;
 use Webkul\DataTransfer\Helpers\Export as ExportHelper;
@@ -67,21 +68,31 @@ trait ShopifyGraphqlRequest
                         return $tokenService->refreshIfNeeded($model);
                     }
 
-                    return $model->accessToken;
-                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-                    // Decryption failed — the stored ciphertext is unreadable (e.g., key rotation).
-                    // The raw DB values are encrypted blobs and cannot be used directly as credentials.
-                    // Attempt to decrypt the raw accessToken as a last resort.
-                    $rawToken = $model->getRawOriginal('accessToken');
-                    if ($rawToken) {
-                        try {
-                            return decrypt($rawToken);
-                        } catch (\Illuminate\Contracts\Encryption\DecryptException $inner) {
-                            // Value is unrecoverable — re-throw original exception.
+                    $token = $model->accessToken;
+
+                    // Handle the case where the token was encrypted without PHP serialization
+                    // (e.g. via Crypt::encryptString() in older migrations). In this case
+                    // decrypt() returns false instead of the actual token string.
+                    if ($token === false || $token === null) {
+                        $rawToken = $model->getRawOriginal('accessToken');
+                        if ($rawToken) {
+                            return Crypt::decryptString($rawToken);
                         }
+
+                        throw new InvalidCredential(
+                            'No valid access token found. Please re-save your Shopify credentials.'
+                        );
                     }
 
-                    throw $e;
+                    return $token;
+                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                    // Decryption failed — the APP_KEY has likely changed since the credentials
+                    // were saved (e.g. after running php artisan key:generate).
+                    throw new InvalidCredential(
+                        'Shopify credentials cannot be decrypted. This is usually caused by the '
+                        .'application encryption key (APP_KEY) changing after the credentials were '
+                        .'saved. Please re-save your Shopify credentials to resolve this issue.'
+                    );
                 }
             }
         }
