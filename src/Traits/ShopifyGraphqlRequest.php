@@ -2,7 +2,6 @@
 
 namespace Webkul\Shopify\Traits;
 
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage as StorageFacade;
 use Webkul\DataTransfer\Helpers\Export as ExportHelper;
@@ -61,38 +60,14 @@ trait ShopifyGraphqlRequest
             $model = ShopifyCredentialsConfig::find($credential['id']);
 
             if ($model) {
-                try {
-                    if ($model->clientId && $model->clientSecret) {
-                        $tokenService = app(ShopifyTokenService::class);
+                if ($model->clientId && $model->clientSecret) {
+                    $tokenService = app(ShopifyTokenService::class);
 
-                        return $tokenService->refreshIfNeeded($model);
-                    }
+                    return $tokenService->refreshIfNeeded($model);
+                }
 
-                    $token = $model->accessToken;
-
-                    // Handle the case where the token was encrypted without PHP serialization
-                    // (e.g. via Crypt::encryptString() in older migrations). In this case
-                    // decrypt() returns false instead of the actual token string.
-                    if ($token === false || $token === null) {
-                        $rawToken = $model->getRawOriginal('accessToken');
-                        if ($rawToken) {
-                            return Crypt::decryptString($rawToken);
-                        }
-
-                        throw new InvalidCredential(
-                            'No valid access token found. Please re-save your Shopify credentials.'
-                        );
-                    }
-
-                    return $token;
-                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-                    // Decryption failed — the APP_KEY has likely changed since the credentials
-                    // were saved (e.g. after running php artisan key:generate).
-                    throw new InvalidCredential(
-                        'Shopify credentials cannot be decrypted. This is usually caused by the '
-                        .'application encryption key (APP_KEY) changing after the credentials were '
-                        .'saved. Please re-save your Shopify credentials to resolve this issue.'
-                    );
+                if ($model->accessToken) {
+                    return $model->accessToken;
                 }
             }
         }

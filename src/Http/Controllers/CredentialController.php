@@ -149,21 +149,13 @@ class CredentialController extends Controller
 
         $credentialData = $credential->getAttributes();
 
-        $shopLocales = [];
-        $publishingChannel = [];
-        $locationAll = [];
+        $response = $this->requestGraphQlApiAction('getShopPublishedLocales', $credentialData);
+        $publishing = $this->requestGraphQlApiAction('getPublications', $credentialData);
+        $locationGetting = $this->requestGraphQlApiAction('getignLocations', $credentialData);
 
-        try {
-            $response = $this->requestGraphQlApiAction('getShopPublishedLocales', $credentialData);
-            $publishing = $this->requestGraphQlApiAction('getPublications', $credentialData);
-            $locationGetting = $this->requestGraphQlApiAction('getignLocations', $credentialData);
-
-            $locationAll = $locationGetting['body']['data']['locations']['edges'] ?? [];
-            $publishingChannel = $publishing['body']['data']['publications']['edges'] ?? [];
-            $shopLocales = $response['body']['data']['shopLocales'] ?? [];
-        } catch (InvalidCredential $e) {
-            session()->flash('warning', trans('shopify::app.shopify.credential.decrypt-warning'));
-        }
+        $locationAll = $locationGetting['body']['data']['locations']['edges'] ?? [];
+        $publishingChannel = $publishing['body']['data']['publications']['edges'] ?? [];
+        $shopLocales = $response['body']['data']['shopLocales'] ?? [];
 
         $apiVersion = (new ShoifyApiVersion)->getApiVersion();
 
@@ -201,8 +193,8 @@ class CredentialController extends Controller
             ]);
         } else {
             $params = $this->validate(request(), [
-                'shopUrl'      => 'required|url',
-                'accessToken'  => 'required',
+                'shopUrl'     => 'required|url',
+                'accessToken' => 'required',
             ]);
         }
 
@@ -210,23 +202,12 @@ class CredentialController extends Controller
 
         if ($isOAuthMode) {
             if (str_contains($requestData['clientSecret'] ?? '', $maskedValue)) {
-                try {
-                    $requestData['clientSecret'] = $credential->clientSecret;
-                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-                    return redirect()->route('shopify.credentials.edit', $id)
-                        ->withErrors(['clientSecret' => trans('shopify::app.shopify.credential.re-enter-required')])
-                        ->withInput();
-                }
+                $requestData['clientSecret'] = $credential->clientSecret;
             }
 
             // Re-validate credentials if clientId or clientSecret changed
-            try {
-                $credentialsChanged = $requestData['clientId'] !== $credential->clientId
-                    || $requestData['clientSecret'] !== $credential->clientSecret;
-            } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-                // Stored secret is unreadable (e.g. APP_KEY changed) — always re-fetch a fresh token
-                $credentialsChanged = true;
-            }
+            $credentialsChanged = $requestData['clientId'] !== $credential->clientId
+                || $requestData['clientSecret'] !== $credential->clientSecret;
 
             if ($credentialsChanged) {
                 try {
@@ -249,15 +230,9 @@ class CredentialController extends Controller
                 }
             }
         } else {
-            // Access token mode
+            // Access token mode — keep existing token if masked
             if (str_contains($requestData['accessToken'] ?? '', $maskedValue)) {
-                try {
-                    $requestData['accessToken'] = $credential->accessToken;
-                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-                    return redirect()->route('shopify.credentials.edit', $id)
-                        ->withErrors(['accessToken' => trans('shopify::app.shopify.credential.re-enter-required')])
-                        ->withInput();
-                }
+                $requestData['accessToken'] = $credential->accessToken;
             }
         }
 

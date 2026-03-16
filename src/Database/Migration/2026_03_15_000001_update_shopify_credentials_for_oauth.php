@@ -16,58 +16,20 @@ return new class extends Migration
         Schema::table('wk_shopify_credentials_config', function (Blueprint $table) {
             $table->string('clientId')->nullable()->after('shopUrl');
             $table->text('clientSecret')->nullable()->after('clientId');
-            // Widen accessToken from VARCHAR(255) to TEXT to accommodate encrypted values
+            // Widen accessToken from VARCHAR(255) to TEXT for longer token values
             $table->text('accessToken')->change();
             $table->timestamp('tokenExpiresAt')->nullable()->after('accessToken');
         });
 
-        // Encrypt existing plaintext accessToken values so they work with the encrypted cast.
-        // Uses Crypt::encrypt() (with PHP serialization) to match the model's 'encrypted' cast,
-        // which reads values via Crypt::decrypt() with $unserialize = true.
+        // Ensure existing accessToken values are stored as plaintext.
+        // Previous versions of this migration may have encrypted them; decrypt if needed.
         DB::table('wk_shopify_credentials_config')->orderBy('id')->each(function ($credential) {
             if (! $credential->accessToken) {
                 return;
             }
 
-            // Skip rows that are already properly encrypted (idempotency guard).
-            // A value encrypted with Crypt::encrypt() will decrypt successfully here.
-            try {
-                Crypt::decrypt($credential->accessToken);
-
-                return; // Already encrypted with the correct method, skip.
-            } catch (\Exception $e) {
-                // Not yet encrypted (or encrypted with encryptString); proceed.
-            }
-
-            // If the value was previously encrypted with Crypt::encryptString(), recover the
-            // plain-text token first so we can re-encrypt it with the correct method.
-            $plainToken = $credential->accessToken;
-            try {
-                $plainToken = Crypt::decryptString($credential->accessToken);
-            } catch (\Exception $e) {
-                // Value is plain text — use it as-is.
-            }
-
-            DB::table('wk_shopify_credentials_config')
-                ->where('id', $credential->id)
-                ->update([
-                    'accessToken' => Crypt::encrypt($plainToken),
-                ]);
-        });
-    }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        // Decrypt accessToken values back to plaintext before removing encrypted cast columns.
-        DB::table('wk_shopify_credentials_config')->orderBy('id')->each(function ($credential) {
-            if (! $credential->accessToken) {
-                return;
-            }
-
-            // Try Crypt::decrypt() first (matches up() which uses Crypt::encrypt()).
+            // Try to decrypt — if it succeeds, the value was encrypted and we store the plaintext.
+            // If it fails, the value is already plaintext — leave it as-is.
             try {
                 $decrypted = Crypt::decrypt($credential->accessToken);
                 DB::table('wk_shopify_credentials_config')
@@ -76,7 +38,7 @@ return new class extends Migration
 
                 return;
             } catch (\Exception $e) {
-                // Not encrypted with Crypt::encrypt(); try the older encryptString format.
+                // Not encrypted with Crypt::encrypt()
             }
 
             try {
@@ -85,10 +47,16 @@ return new class extends Migration
                     ->where('id', $credential->id)
                     ->update(['accessToken' => $decrypted]);
             } catch (\Exception $e) {
-                // Already plaintext or unreadable; skip.
+                // Already plaintext — leave as-is.
             }
         });
+    }
 
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
         Schema::table('wk_shopify_credentials_config', function (Blueprint $table) {
             $table->string('accessToken')->change();
             $table->dropColumn(['clientId', 'clientSecret', 'tokenExpiresAt']);

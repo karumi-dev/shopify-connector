@@ -42,8 +42,6 @@ class ShopifyCredentialsConfig extends Model implements HistoryContract, Present
         'storelocaleMapping' => 'array',
         'storeLocales'       => 'array',
         'extras'             => 'array',
-        'accessToken'        => 'encrypted',
-        'clientSecret'       => 'encrypted',
         'tokenExpiresAt'     => 'datetime',
     ];
 
