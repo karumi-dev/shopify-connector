@@ -62,7 +62,9 @@ return [
             'update-success' => 'Actualización Exitosa',
             'invalid'        => 'Credencial Inválida',
             'invalidurl'     => 'URL Inválida',
-            'already_taken'  => 'La URL de la tienda ya ha sido tomada.',
+            'already_taken'    => 'La URL de la tienda ya ha sido tomada.',
+            'decrypt-warning'  => 'Sus credenciales de Shopify no se pudieron descifrar (es posible que APP_KEY haya cambiado). Vuelva a introducir sus credenciales y guarde.',
+            're-enter-required' => 'Las credenciales almacenadas no se pueden descifrar. Introduzca el valor de nuevo.',
             'index'          => [
                 'title'                 => 'Credenciales de Shopify',
                 'create'                => 'Crear Credencial',
