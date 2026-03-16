@@ -69,28 +69,16 @@ trait ShopifyGraphqlRequest
 
                     return $model->accessToken;
                 } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-                    // Encrypted values may be corrupted (e.g., stored without going through the cast).
-                    // Attempt recovery using raw DB values.
-                    $rawSecret = $model->getRawOriginal('clientSecret');
-
-                    if ($model->clientId && $rawSecret) {
-                        $tokenService = app(ShopifyTokenService::class);
-                        $tokenData = $tokenService->fetchToken($model->shopUrl, $model->clientId, $rawSecret);
-
-                        // Re-save through the model so the encrypted cast properly encrypts the values
-                        $model->forceFill([
-                            'clientSecret'   => $rawSecret,
-                            'accessToken'    => $tokenData['access_token'],
-                            'tokenExpiresAt' => \Illuminate\Support\Carbon::now()->addSeconds(($tokenData['expires_in'] ?? 86399) - 60),
-                        ])->save();
-
-                        return $tokenData['access_token'];
-                    }
-
-                    // For non-OAuth credentials, try the raw accessToken value
+                    // Decryption failed — the stored ciphertext is unreadable (e.g., key rotation).
+                    // The raw DB values are encrypted blobs and cannot be used directly as credentials.
+                    // Attempt to decrypt the raw accessToken as a last resort.
                     $rawToken = $model->getRawOriginal('accessToken');
                     if ($rawToken) {
-                        return $rawToken;
+                        try {
+                            return decrypt($rawToken);
+                        } catch (\Illuminate\Contracts\Encryption\DecryptException $inner) {
+                            // Value is unrecoverable — re-throw original exception.
+                        }
                     }
 
                     throw $e;

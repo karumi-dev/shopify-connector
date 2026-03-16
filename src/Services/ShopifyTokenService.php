@@ -29,7 +29,7 @@ class ShopifyTokenService
         try {
             $response = Http::asForm()
                 ->timeout(30)
-                ->retry(3, 500)
+                ->retry(3, 500, fn ($e) => $e instanceof \Illuminate\Http\Client\ConnectionException)
                 ->post($tokenUrl, [
                     'grant_type'    => 'client_credentials',
                     'client_id'     => $clientId,
