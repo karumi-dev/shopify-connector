@@ -62,7 +62,9 @@ return [
             'update-success' => '更新成功',
             'invalid'        => '无效凭据',
             'invalidurl'     => '无效的 URL',
-            'already_taken'  => '商店网址已被占用',
+            'already_taken'    => '商店网址已被占用',
+            'decrypt-warning'  => '您的 Shopify 凭据无法解密（可能是 APP_KEY 已更改）。请重新输入您的凭据并保存。',
+            're-enter-required' => '存储的凭据无法解密，请重新输入该值。',
             'index'          => [
                 'title'                 => 'Shopify 凭据',
                 'create'                => '创建凭据',

@@ -149,17 +149,21 @@ class CredentialController extends Controller
 
         $credentialData = $credential->getAttributes();
 
-        $response = $this->requestGraphQlApiAction('getShopPublishedLocales', $credentialData);
+        $shopLocales = [];
+        $publishingChannel = [];
+        $locationAll = [];
 
-        $publishing = $this->requestGraphQlApiAction('getPublications', $credentialData);
+        try {
+            $response = $this->requestGraphQlApiAction('getShopPublishedLocales', $credentialData);
+            $publishing = $this->requestGraphQlApiAction('getPublications', $credentialData);
+            $locationGetting = $this->requestGraphQlApiAction('getignLocations', $credentialData);
 
-        $locationGetting = $this->requestGraphQlApiAction('getignLocations', $credentialData);
-
-        $locationAll = $locationGetting['body']['data']['locations']['edges'] ?? [];
-
-        $publishingChannel = $publishing['body']['data']['publications']['edges'] ?? [];
-
-        $shopLocales = $response['body']['data']['shopLocales'] ?? [];
+            $locationAll = $locationGetting['body']['data']['locations']['edges'] ?? [];
+            $publishingChannel = $publishing['body']['data']['publications']['edges'] ?? [];
+            $shopLocales = $response['body']['data']['shopLocales'] ?? [];
+        } catch (InvalidCredential $e) {
+            session()->flash('warning', trans('shopify::app.shopify.credential.decrypt-warning'));
+        }
 
         $apiVersion = (new ShoifyApiVersion)->getApiVersion();
 
@@ -206,12 +210,23 @@ class CredentialController extends Controller
 
         if ($isOAuthMode) {
             if (str_contains($requestData['clientSecret'] ?? '', $maskedValue)) {
-                $requestData['clientSecret'] = $credential->clientSecret;
+                try {
+                    $requestData['clientSecret'] = $credential->clientSecret;
+                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                    return redirect()->route('shopify.credentials.edit', $id)
+                        ->withErrors(['clientSecret' => trans('shopify::app.shopify.credential.re-enter-required')])
+                        ->withInput();
+                }
             }
 
             // Re-validate credentials if clientId or clientSecret changed
-            $credentialsChanged = $requestData['clientId'] !== $credential->clientId
-                || $requestData['clientSecret'] !== $credential->clientSecret;
+            try {
+                $credentialsChanged = $requestData['clientId'] !== $credential->clientId
+                    || $requestData['clientSecret'] !== $credential->clientSecret;
+            } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                // Stored secret is unreadable (e.g. APP_KEY changed) — always re-fetch a fresh token
+                $credentialsChanged = true;
+            }
 
             if ($credentialsChanged) {
                 try {
@@ -236,7 +251,13 @@ class CredentialController extends Controller
         } else {
             // Access token mode
             if (str_contains($requestData['accessToken'] ?? '', $maskedValue)) {
-                $requestData['accessToken'] = $credential->accessToken;
+                try {
+                    $requestData['accessToken'] = $credential->accessToken;
+                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                    return redirect()->route('shopify.credentials.edit', $id)
+                        ->withErrors(['accessToken' => trans('shopify::app.shopify.credential.re-enter-required')])
+                        ->withInput();
+                }
             }
         }
 
