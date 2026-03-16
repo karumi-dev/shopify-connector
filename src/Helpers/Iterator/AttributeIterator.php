@@ -18,6 +18,8 @@ class AttributeIterator implements \Iterator
 
     private $mergedOptions;
 
+    private bool $isFirstFetch = true;
+
     public function __construct($credential)
     {
         $this->credential = $credential;
@@ -87,13 +89,24 @@ class AttributeIterator implements \Iterator
             $mutationType = $this->cursor ? 'productOptionByCursor' : 'productGettingOptions';
             $graphResponse = $this->requestGraphQlApiAction($mutationType, $this->credential, $variables);
 
+            if (! empty($graphResponse['body']['errors'])) {
+                $errorMessages = array_column($graphResponse['body']['errors'], 'message');
+                throw new \RuntimeException('Shopify GraphQL error: '.implode('; ', $errorMessages));
+            }
+
             $edges = $graphResponse['body']['data']['products']['edges'] ?? [];
             $this->currentPageData = $this->formatedAttributeAndOption($edges);
             // Update the cursor for the next page
             $this->cursor = ! empty($edges) ? end($edges)['cursor'] : null;
 
         } catch (\Exception $e) {
-            error_log($e->getMessage());
+            if ($this->isFirstFetch) {
+                throw $e;
+            }
+
+            \Illuminate\Support\Facades\Log::error('Shopify AttributeIterator pagination error: '.$e->getMessage());
+        } finally {
+            $this->isFirstFetch = false;
         }
 
         $this->currentKey = 0;
